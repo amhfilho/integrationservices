@@ -1,0 +1,10 @@
+.idea
+*/target
+*.iml
+*/*.iml
+**/logs
+**/file
+modules
+node_modules/
+.history/
+.gulp/
