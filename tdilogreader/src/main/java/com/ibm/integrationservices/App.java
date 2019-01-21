@@ -18,6 +18,9 @@ public class App {
         //reader.lines().forEach(n -> System.out.println(n));
 
         System.out.println(String.format("opened in %d milliseconds",time));
-        
+
+        TransactionSearch search = new TransactionSearch(reader.lines());
+        TdiTransaction transaction = search.findFirst("");
+        System.out.println(transaction);
     }
 }
