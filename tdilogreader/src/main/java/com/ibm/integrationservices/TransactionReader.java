@@ -1,31 +1,29 @@
 package com.ibm.integrationservices;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
 
 /**
- * Reads requests from Netcool inside logfile
+ * Reads all transactions from logfile
  */
-public class NetcoolReader {
+public class TransactionReader {
     private List<String> lines;
 
-    public NetcoolReader(List<String> lines) {
+    public TransactionReader(List<String> lines) {
         this.lines = lines;
     }
 
-    public Map<Integer, String> findAllWebServiceRequests(){
+    private Map<Integer, String> findAllWebServiceRequests(){
         return findAllRequests("SOAP request:", "</soapenv:Envelope>");
     }
 
-    public Map<Integer, String> findAllWebServiceResponses(){
+    private Map<Integer, String> findAllWebServiceResponses(){
         return findAllRequests("SOAP response:", "</soapenv:Envelope>");
     }
 
-    public Map<Integer,String> findAllNetcoolRequests(){
+    private Map<Integer,String> findAllNetcoolRequests(){
         return findAllRequests("Input XML", "</command>");
     }
 
@@ -58,7 +56,7 @@ public class NetcoolReader {
         return requestMap;
     }
 
-    public Map<Integer,String> findAllTransactions(){
+    public List<String> findAllTransactions(){
         Map<Integer,String> netcool = findAllNetcoolRequests();
         Map<Integer,String> wsRequests = findAllWebServiceRequests();
         Map<Integer,String> wsResponses = findAllWebServiceResponses();
@@ -66,16 +64,28 @@ public class NetcoolReader {
         all.putAll(netcool);
         all.putAll(wsRequests);
         all.putAll(wsResponses);
-        return all;
+        return sortedTransactions(all);
+    }
+
+    private List<String> sortedTransactions(Map<Integer,String> transactions){
+        List<Integer> keyList = new ArrayList<>(transactions.keySet());
+        Collections.sort(keyList);
+        List<String> sortedTransactions = new ArrayList<>();
+        for(Integer key:keyList){
+            sortedTransactions.add(transactions.get(key));
+        }
+        return sortedTransactions;
     }
 
     public static void main(String[] args) throws IOException {
+
         long start = System.currentTimeMillis();
-        new NetcoolReader(TdiFileReader.open("C:\\Users\\AntonioMarioHenrique\\Desktop\\temp\\chubb.prd.2018-12-04.log")
+        List<String> transactions =
+            new TransactionReader(TdiFileReader.open("C:\\temp\\ibmdi.log")
                 .lines())
-                .findAllTransactions()
-                .entrySet()
-                .forEach(entry -> System.out.println(entry.getKey() + ": " + entry.getValue()));
+                .findAllTransactions();
+
+        Files.write(Paths.get("c:/temp/transactions2.txt"),transactions);
 
         long time = System.currentTimeMillis() - start;
         System.out.println(String.format("Run in %s milliseconds",time));
