@@ -10,6 +10,22 @@ public class TdiTransaction{
     private String netcoolEvent;
     private LocalDateTime requestTime;
     private String command;
+    private String payload;
+
+    public TdiTransaction(String command, LocalDateTime requestTime) {
+        this.command = command;
+        this.requestTime = requestTime;
+    }
+
+    public TdiTransaction event(String netcoolEvent){
+        this.netcoolEvent = netcoolEvent;
+        return this;
+    }
+
+    public TdiTransaction payload(String payload){
+        this.payload = payload;
+        return this;
+    }
 
     @Override
     public String toString() {
@@ -17,16 +33,9 @@ public class TdiTransaction{
                 "netcoolEvent='" + netcoolEvent + '\'' +
                 ", requestTime=" + requestTime +
                 ", command='" + command + '\'' +
+                ", payload='" + payload + '\'' +
                 '}';
     }
-
-    public TdiTransaction(String command, String netcoolEvent, LocalDateTime requestTime) {
-        this.command = command;
-        this.netcoolEvent = netcoolEvent;
-        this.requestTime = requestTime;
-    }
-
-
 
     public String getNetcoolEvent() {
         return netcoolEvent;
@@ -38,5 +47,9 @@ public class TdiTransaction{
 
     public String getCommand() {
         return command;
+    }
+
+    public String getPayload() {
+        return payload;
     }
 }

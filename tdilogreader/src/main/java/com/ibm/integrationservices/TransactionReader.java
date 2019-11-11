@@ -81,11 +81,30 @@ public class TransactionReader {
 
         long start = System.currentTimeMillis();
         List<String> transactions =
-            new TransactionReader(TdiFileReader.open("C:\\temp\\ibmdi.log")
+            new TransactionReader(TdiFileReader.open("C:\\temp\\chubb.prd.2018-12-04.log")
                 .lines())
                 .findAllTransactions();
 
-        Files.write(Paths.get("c:/temp/transactions2.txt"),transactions);
+        Files.write(Paths.get("c:/temp/chubb.txt"),transactions);
+
+        for (String t:transactions){
+            String command = "CALLBACK";
+            if(t.contains("InputXML") || t.contains("SOAP")){
+                if(t.contains("CREATE_PROBLEM")){
+                    command = "CREATE_PROBLEM";
+                }
+                if(t.contains("UPDATE_PROBLEM")){
+                    command = "UPDATE_PROBLEM";
+                }
+                if(t.contains("UPDATE_CALLBACK")){
+                    command = "UPDATE_CALLBACK";
+                }
+            }
+            LineExtractor extractor = new LineExtractor(t);
+            TdiTransaction transaction =
+                    new TdiTransaction(command, extractor.extractDate())
+                            .payload(extractor.extractXml());
+        }
 
         long time = System.currentTimeMillis() - start;
         System.out.println(String.format("Run in %s milliseconds",time));
