@@ -1,9 +1,7 @@
 package com.ibm.integrationservices;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -12,28 +10,15 @@ import java.util.List;
 
 public class TdiFileReader {
 
-    private List<String> lines;
-
-    private TdiFileReader(List<String> lines){
-        this.lines = lines;
-    }
-
-    public static TdiFileReader open(String filePath) throws IOException {
-        Instant start = Instant.now();
+    public List<String> open(InputStream inputStream) throws IOException {
         List<String> lines = new ArrayList<>();
-        try(BufferedReader br = new BufferedReader(new FileReader(new File(filePath)))){
+        try(BufferedReader br = new BufferedReader(new InputStreamReader(inputStream))){
             String line = "";
             while((line = br.readLine()) != null){
                 lines.add(line);
             }
         }
-        Instant end = Instant.now();
-        System.out.println("File opened in " + Duration.between(start, end).toMillis() + " milliseconds");
-        return new TdiFileReader(lines);
+        return lines;
     }
 
-    public List<String> lines(){
-        return Collections.unmodifiableList(lines);
-    }
-    
 }

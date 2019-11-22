@@ -45,6 +45,14 @@ public class LineExtractorTest {
         assertEquals(36, date.getSecond());
     }
 
+    @Test
+    public void commandExtractTest(){
+        Application application = new Application();
+        String input = "2019-11-22 00:01:33,140 INFO  - :: XPath command: CALLBACK";
+        String command = application.extractCommand(input);
+        assertEquals("CALLBACK", command);
+    }
+
 
 
     private String loadFile(String fileName) throws URISyntaxException, IOException {

@@ -1,6 +1,7 @@
 package com.ibm.integrationservices;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -18,29 +19,31 @@ public class TransactionReader {
     }
 
     private Map<Integer, String> findAllWebServiceRequests(){
-        return findAllRequests("SOAP request:", "</soapenv:Envelope>");
+        return findAllRequests(Arrays.asList("SOAP request:"),
+                Arrays.asList("</soapenv:Envelope>","</SOAP-ENV:Envelope>"));
     }
 
     private Map<Integer, String> findAllWebServiceResponses(){
-        return findAllRequests("SOAP response:", "</soapenv:Envelope>");
+        return findAllRequests(Arrays.asList("SOAP request:"),
+                Arrays.asList("</soapenv:Envelope>","</SOAP-ENV:Envelope>"));
     }
 
     private Map<Integer,String> findAllNetcoolRequests(){
-        return findAllRequests("Input XML", "</command>");
+        return findAllRequests(Arrays.asList("Input XML"), Arrays.asList("</command>"));
     }
 
-    private Map<Integer,String> findAllRequests(String startKey, String endKey){
+    private Map<Integer,String> findAllRequests(List<String> startKey, List<String> endKey){
         Map<Integer,String> requestMap = new HashMap<>();
         boolean requestFound = false;
         String request = "";
         int lineNumber = 0;
         for(int i = 0; i < lines.size(); i++){
             String line = lines.get(i);
-            if(line.contains(startKey)){
+            if(contaisAnyKey(line, startKey)){
                 lineNumber = i;
                 request = line;
                 requestFound = true;
-                if(line.contains(endKey)){
+                if(contaisAnyKey(line, endKey)){
                     requestFound = false;
                     requestMap.put(lineNumber,request);
                     request = "";
@@ -48,7 +51,7 @@ public class TransactionReader {
             }
             else if(requestFound){
                 request += line;
-                if(line.contains(endKey)){
+                if(contaisAnyKey(line, endKey)){
                     requestFound = false;
                     requestMap.put(lineNumber,request);
                     request = "";
@@ -57,6 +60,15 @@ public class TransactionReader {
             }
         }
         return requestMap;
+    }
+
+    private boolean contaisAnyKey(String line, List<String> startKey) {
+        for(String key: startKey){
+            if(line.contains(key)){
+                return true;
+            }
+        }
+        return false;
     }
 
     public List<String> findAllTransactions(){
@@ -92,47 +104,5 @@ public class TransactionReader {
             sortedTransactions.add(transactions.get(key));
         }
         return sortedTransactions;
-    }
-
-    public static void main(String[] args) throws IOException {
-
-        long start = System.currentTimeMillis();
-        System.out.println("Reading log file...");
-        List<String> transactions =
-            new TransactionReader(TdiFileReader.open("C:\\temp\\logs\\acc.log")
-                .lines())
-                .findAllTransactions();
-
-        System.out.println("Writing transactions...");
-        Files.write(Paths.get("c:/temp/logs/acc.txt"),transactions);
-
-        /*
-        List<TdiTransaction> tList = new ArrayList<>();
-
-        for (String t:transactions){
-            String command = "CALLBACK";
-            if(t.contains("InputXML") || t.contains("SOAP")){
-                if(t.contains("CREATE_PROBLEM")){
-                    command = "CREATE_PROBLEM";
-                }
-                if(t.contains("UPDATE_PROBLEM")){
-                    command = "UPDATE_PROBLEM";
-                }
-                if(t.contains("UPDATE_CALLBACK")){
-                    command = "UPDATE_CALLBACK";
-                }
-            }
-            LineExtractor extractor = new LineExtractor(t);
-            TdiTransaction transaction =
-                    new TdiTransaction(command, extractor.extractDate())
-                            .payload(extractor.extractXml());
-            tList.add(transaction);
-        }
-
-        tList.forEach(x->System.out.println(x.getRequestTime() + " - " + x.getCommand() + " - " + x.getPayload()));
-*/
-        long time = System.currentTimeMillis() - start;
-        System.out.println(String.format("Run in %s milliseconds",time));
-
     }
 }

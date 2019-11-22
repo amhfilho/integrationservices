@@ -2,7 +2,7 @@ package com.ibm.integrationservices;
 
 import java.time.LocalDateTime;
 
-public class TdiTransaction{
+public class TdiTransaction {
 
     public static final String XPATH_EXT_PROB_ID = "XPath EXT_PROB_ID:";
     public static final String XPATH_COMMAND = "XPath command:";
@@ -10,22 +10,15 @@ public class TdiTransaction{
     private String netcoolEvent;
     private LocalDateTime requestTime;
     private String command;
-    private String payload;
+    private String netcoolRequest;
+    private String soapRequest;
+    private String soapResponse;
+    private String netcoolResponse;
 
-    public TdiTransaction(String command, LocalDateTime requestTime) {
+    public TdiTransaction(String command){
         this.command = command;
-        this.requestTime = requestTime;
     }
 
-    public TdiTransaction event(String netcoolEvent){
-        this.netcoolEvent = netcoolEvent;
-        return this;
-    }
-
-    public TdiTransaction payload(String payload){
-        this.payload = payload;
-        return this;
-    }
 
     @Override
     public String toString() {
@@ -33,7 +26,10 @@ public class TdiTransaction{
                 "netcoolEvent='" + netcoolEvent + '\'' +
                 ", requestTime=" + requestTime +
                 ", command='" + command + '\'' +
-                ", payload='" + payload + '\'' +
+                ", netcoolRequest='" + netcoolRequest + '\'' +
+                ", soapRequest='" + soapRequest + '\'' +
+                ", soapResponse='" + soapResponse + '\'' +
+                ", netcoolResponse='" + netcoolResponse + '\'' +
                 '}';
     }
 
@@ -41,15 +37,55 @@ public class TdiTransaction{
         return netcoolEvent;
     }
 
+    public void setNetcoolEvent(String netcoolEvent) {
+        this.netcoolEvent = netcoolEvent;
+    }
+
     public LocalDateTime getRequestTime() {
         return requestTime;
+    }
+
+    public void setRequestTime(LocalDateTime requestTime) {
+        this.requestTime = requestTime;
     }
 
     public String getCommand() {
         return command;
     }
 
-    public String getPayload() {
-        return payload;
+    public void setCommand(String command) {
+        this.command = command;
+    }
+
+    public String getNetcoolRequest() {
+        return netcoolRequest;
+    }
+
+    public void setNetcoolRequest(String netcoolRequest) {
+        this.netcoolRequest = netcoolRequest;
+    }
+
+    public String getSoapRequest() {
+        return soapRequest;
+    }
+
+    public void setSoapRequest(String soapRequest) {
+        this.soapRequest = soapRequest;
+    }
+
+    public String getSoapResponse() {
+        return soapResponse;
+    }
+
+    public void setSoapResponse(String soapResponse) {
+        this.soapResponse = soapResponse;
+    }
+
+    public String getNetcoolResponse() {
+        return netcoolResponse;
+    }
+
+    public void setNetcoolResponse(String netcoolResponse) {
+        this.netcoolResponse = netcoolResponse;
     }
 }
