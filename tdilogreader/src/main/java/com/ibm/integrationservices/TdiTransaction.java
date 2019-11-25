@@ -14,23 +14,38 @@ public class TdiTransaction {
     private String soapRequest;
     private String soapResponse;
     private String netcoolResponse;
+    private String getKeysRequest;
+    private String getKeysResponse;
+    private int lineNumber;
 
-    public TdiTransaction(String command){
+    public TdiTransaction(int lineNumber, String command){
+        this.lineNumber = lineNumber;
         this.command = command;
     }
 
 
     @Override
     public String toString() {
-        return "TdiTransaction{" +
-                "netcoolEvent='" + netcoolEvent + '\'' +
-                ", requestTime=" + requestTime +
-                ", command='" + command + '\'' +
-                ", netcoolRequest='" + netcoolRequest + '\'' +
-                ", soapRequest='" + soapRequest + '\'' +
-                ", soapResponse='" + soapResponse + '\'' +
-                ", netcoolResponse='" + netcoolResponse + '\'' +
+        return "TdiTransaction{\n" +
+                "\tdateTime=" + requestTime + "\n" +
+                "\tnetcoolEvent='" + netcoolEvent + '\'' + "\n" +
+                "\tcommand='" + command + '\'' + "\n" +
+                "\tnetcoolRequest='" + netcoolRequest + '\'' + "\n" +
+                "\tgetKeysRequest=" + getKeysRequest + "\n" +
+                "\tgetKeysResponse=" + getKeysResponse + "\n" +
+                "\tsoapRequest='" + soapRequest + '\'' + "\n" +
+                "\tsoapResponse='" + soapResponse + '\'' + "\n" +
+                "\tnetcoolResponse='" + netcoolResponse + '\'' + "\n" +
+                "\tlineNumber=" + lineNumber + "\n" +
                 '}';
+    }
+
+    public int getLineNumber() {
+        return lineNumber;
+    }
+
+    public void setLineNumber(int lineNumber) {
+        this.lineNumber = lineNumber;
     }
 
     public String getNetcoolEvent() {
@@ -87,5 +102,21 @@ public class TdiTransaction {
 
     public void setNetcoolResponse(String netcoolResponse) {
         this.netcoolResponse = netcoolResponse;
+    }
+
+    public String getGetKeysRequest() {
+        return getKeysRequest;
+    }
+
+    public void setGetKeysRequest(String getKeysRequest) {
+        this.getKeysRequest = getKeysRequest;
+    }
+
+    public String getGetKeysResponse() {
+        return getKeysResponse;
+    }
+
+    public void setGetKeysResponse(String getKeysResponse) {
+        this.getKeysResponse = getKeysResponse;
     }
 }
