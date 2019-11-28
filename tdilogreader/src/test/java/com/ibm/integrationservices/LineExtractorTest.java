@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 
@@ -49,8 +50,15 @@ public class LineExtractorTest {
     public void commandExtractTest(){
         Application application = new Application();
         String input = "2019-11-22 00:01:33,140 INFO  - :: XPath command: CALLBACK";
-        String command = application.extractCommand(input);
+        String command = new TransactionReader(null).extractCommand(input);
         assertEquals("CALLBACK", command);
+    }
+
+    @Test
+    public void splitTest(){
+        String source = "2019-11-27 15:34:03,399 INFO  - PKH::USWH0P0ALLP:10754474:pkh ifUpdate::Transform UpdateResponseXSL: Initial Update Response: <?xml version='1.0' encoding='UTF-8'?><SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><SOAP-ENV:Body><updateResponse><sys_id>52a5e2badbd108106bd0ff441d961975</sys_id></updateResponse></SOAP-ENV:Body></SOAP-ENV:Envelope>";
+        String parts[] = source.split("\\s+");
+        assertEquals("PKH::USWH0P0ALLP:10754474:pkh", parts[4]);
     }
 
 

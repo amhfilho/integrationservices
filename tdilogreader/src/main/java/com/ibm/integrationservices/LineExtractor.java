@@ -28,11 +28,4 @@ public class LineExtractor {
         return LocalDateTime.parse(input, formatter);
     }
 
-    public String extractNetcoolEvent(){
-        if(!this.line.contains("CALLBACK")){
-
-        }
-        return null;
-    }
-
 }

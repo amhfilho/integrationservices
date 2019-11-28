@@ -40,7 +40,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>com.ibm.integrationservices.TransactionReader</mainClass>
+                            <mainClass>com.ibm.integrationservices.Application</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

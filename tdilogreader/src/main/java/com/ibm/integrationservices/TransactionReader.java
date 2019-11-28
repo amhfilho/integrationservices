@@ -6,6 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -18,91 +20,142 @@ public class TransactionReader {
         this.lines = lines;
     }
 
-    private Map<Integer, String> findAllWebServiceRequests(){
-        return findAllRequests(Arrays.asList("SOAP request:"),
-                Arrays.asList("</soapenv:Envelope>","</SOAP-ENV:Envelope>"));
-    }
-
-    private Map<Integer, String> findAllWebServiceResponses(){
-        return findAllRequests(Arrays.asList("SOAP request:"),
-                Arrays.asList("</soapenv:Envelope>","</SOAP-ENV:Envelope>"));
-    }
-
-    private Map<Integer,String> findAllNetcoolRequests(){
-        return findAllRequests(Arrays.asList("Input XML"), Arrays.asList("</command>"));
-    }
-
-    private Map<Integer,String> findAllRequests(List<String> startKey, List<String> endKey){
-        Map<Integer,String> requestMap = new HashMap<>();
-        boolean requestFound = false;
-        String request = "";
-        int lineNumber = 0;
-        for(int i = 0; i < lines.size(); i++){
-            String line = lines.get(i);
-            if(contaisAnyKey(line, startKey)){
-                lineNumber = i;
-                request = line;
-                requestFound = true;
-                if(contaisAnyKey(line, endKey)){
-                    requestFound = false;
-                    requestMap.put(lineNumber,request);
-                    request = "";
-                }
-            }
-            else if(requestFound){
-                request += line;
-                if(contaisAnyKey(line, endKey)){
-                    requestFound = false;
-                    requestMap.put(lineNumber,request);
-                    request = "";
+    public List<TdiTransaction> readTransactions() throws IOException {
+        List<TdiTransaction> transactions = new ArrayList<>();
+        int linesTotal = this.lines.size();
+        int linesProcessed = 0;
+        for (int i = 0; i < linesTotal; i++) {
+            String line = this.lines.get(i);
+            if (line.contains("XPath command:")) { //start of a new request
+                TdiTransaction transaction = new TdiTransaction(i, extractCommand(line));
+                String netcoolEventId = extractEventId(line, transaction.getCommand());
+                LocalDateTime dateTime = extractDateTime(line);
+                TdiEvent inputXml = extractMessage(
+                        lines,
+                        i,
+                        new SearchCondition(Arrays.asList("Input XML")),
+                        Arrays.asList("</command>"));
+                TdiEvent getKeysRequest = null;
+                TdiEvent getKeysResponse = null;
+                if (transaction.getCommand().equals("UPDATE_CALLBACK")) {
+                    getKeysRequest = extractMessage(
+                            lines,
+                            i,
+                            new SearchCondition(
+                                    Arrays.asList("TicketHandle"),
+                                    Arrays.asList("soap request:"),
+                                    "and"),
+                            Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"));
+                    getKeysResponse = extractMessage(
+                            lines,
+                            i,
+                            new SearchCondition(
+                                    Arrays.asList("TicketHandle"),
+                                    Arrays.asList("soap response:"),
+                                    "and"),
+                            Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"));
                 }
 
+                SearchCondition requestSearchCondition = new SearchCondition(
+                        netcoolEventId,
+                        Arrays.asList("soap request:", "UpdateCallbackXML"),
+                        Arrays.asList("TicketHandle"),
+                        "not");
+                SearchCondition responseSearchCondition = new SearchCondition(
+                        netcoolEventId,
+                        Arrays.asList("soap response:", "UpdateCallback Response:", "SOAP-ENV:Fault"),
+                        Arrays.asList("TicketHandle"),
+                        "not");
+
+                TdiEvent soapRequest = extractMessage(
+                        lines,
+                        i,
+                        requestSearchCondition,
+                        Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"));
+                TdiEvent soapResponse = extractMessage(
+                        lines,
+                        i,
+                        responseSearchCondition,
+                        Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"));
+                TdiEvent netcoolResponse = extractMessage(
+                        lines,
+                        i,
+                        new SearchCondition(Arrays.asList("<result")),
+                        Arrays.asList("</result>"));
+
+
+                transaction.setRequestTime(dateTime);
+                transaction.setNetcoolEvent(netcoolEventId);
+                transaction.setNetcoolRequest(inputXml);
+                transaction.setSoapRequest(soapRequest);
+                transaction.setSoapResponse(soapResponse);
+                transaction.setNetcoolResponse(netcoolResponse);
+                transaction.setGetKeysRequest(getKeysRequest);
+                transaction.setGetKeysResponse(getKeysResponse);
+
+                transactions.add(transaction);
             }
+
+            linesProcessed++;
+            System.out.print("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
+            System.out.print("Completed: " + ((100*linesProcessed)/linesTotal) + "%");
         }
-        return requestMap;
+        System.out.println();
+        return transactions;
     }
 
-    private boolean contaisAnyKey(String line, List<String> startKey) {
-        for(String key: startKey){
-            if(line.contains(key)){
+    private LocalDateTime extractDateTime(String line) {
+        String strings[] = line.split(" ");
+        return LocalDateTime.parse(strings[0] + " " + strings[1], DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS"));
+    }
+
+    private String extractEventId(String line, String command) {
+        if (!command.equals("CALLBACK")) {
+            String[] strings = line.split(" ");
+            return strings[5].replaceAll("\'", "").replaceAll("::", "");
+        }
+        return "";
+    }
+
+    public String extractCommand(String input) {
+        int keyIndex = input.indexOf("XPath command:");
+        int commandIndex = keyIndex + "XPath command:".length();
+        return input.substring(commandIndex).trim();
+    }
+
+    private boolean containsAnyKey(String line, List<String> startKey) {
+        for (String key : startKey) {
+            if (line.toLowerCase().contains(key.toLowerCase())) {
                 return true;
             }
         }
         return false;
     }
 
-    public List<String> findAllTransactions(){
-        //Instant startNetcool = Instant.now();
-        Map<Integer,String> netcool = findAllNetcoolRequests();
-        //Instant endNetcool = Instant.now();
-        //System.out.println("Run netcool in " + Duration.between(startNetcool, endNetcool).toMillis());
-
-        //Instant startWs = Instant.now();
-        Map<Integer,String> wsRequests = findAllWebServiceRequests();
-        //Instant endWs = Instant.now();
-        //System.out.println("Run ws request in " + Duration.between(startWs, endWs).toMillis());
-
-        //Instant startWsR = Instant.now();
-        Map<Integer,String> wsResponses = findAllWebServiceResponses();
-
-        //Instant endWsR = Instant.now();
-        //System.out.println("Run ws response in " + Duration.between(startWsR,endWsR).toMillis());
-
-        Map<Integer,String> all = new HashMap<>();
-        all.putAll(netcool);
-        all.putAll(wsRequests);
-        all.putAll(wsResponses);
-
-        return sortedTransactions(all);
-    }
-
-    private List<String> sortedTransactions(Map<Integer,String> transactions){
-        List<Integer> keyList = new ArrayList<>(transactions.keySet());
-        Collections.sort(keyList);
-        List<String> sortedTransactions = new ArrayList<>();
-        for(Integer key:keyList){
-            sortedTransactions.add(transactions.get(key));
+    private TdiEvent extractMessage(List<String> lines, int cursor, SearchCondition startSearch, List<String> endKey) {
+        boolean finishPart = false;
+        String part = "";
+        int aux = cursor + 1;
+        boolean partFound = false;
+        int lineFound = 0;
+        while (!finishPart && aux < lines.size()) {
+            String actualLine = lines.get(aux);
+            if (startSearch.match(actualLine)) {
+                partFound = true;
+                lineFound = aux;
+                part += actualLine;
+                if (containsAnyKey(part, endKey)) {
+                    break;
+                }
+            } else if (partFound) {
+                part += lines.get(aux);
+                if (containsAnyKey(lines.get(aux), endKey)) {
+                    finishPart = true;
+                    partFound = false;
+                }
+            }
+            aux++;
         }
-        return sortedTransactions;
+        return TdiEvent.createFromText(null, lineFound, part);
     }
 }

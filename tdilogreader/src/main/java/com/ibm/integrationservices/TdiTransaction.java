@@ -4,48 +4,20 @@ import java.time.LocalDateTime;
 
 public class TdiTransaction {
 
-    public static final String XPATH_EXT_PROB_ID = "XPath EXT_PROB_ID:";
-    public static final String XPATH_COMMAND = "XPath command:";
-
     private String netcoolEvent;
     private LocalDateTime requestTime;
     private String command;
-    private String netcoolRequest;
-    private String soapRequest;
-    private String soapResponse;
-    private String netcoolResponse;
-    private String getKeysRequest;
-    private String getKeysResponse;
+    private TdiEvent netcoolRequest;
+    private TdiEvent soapRequest;
+    private TdiEvent soapResponse;
+    private TdiEvent netcoolResponse;
+    private TdiEvent getKeysRequest;
+    private TdiEvent getKeysResponse;
     private int lineNumber;
 
     public TdiTransaction(int lineNumber, String command){
         this.lineNumber = lineNumber;
         this.command = command;
-    }
-
-
-    @Override
-    public String toString() {
-        return "TdiTransaction{\n" +
-                "\tdateTime=" + requestTime + "\n" +
-                "\tnetcoolEvent='" + netcoolEvent + '\'' + "\n" +
-                "\tcommand='" + command + '\'' + "\n" +
-                "\tnetcoolRequest='" + netcoolRequest + '\'' + "\n" +
-                "\tgetKeysRequest=" + getKeysRequest + "\n" +
-                "\tgetKeysResponse=" + getKeysResponse + "\n" +
-                "\tsoapRequest='" + soapRequest + '\'' + "\n" +
-                "\tsoapResponse='" + soapResponse + '\'' + "\n" +
-                "\tnetcoolResponse='" + netcoolResponse + '\'' + "\n" +
-                "\tlineNumber=" + lineNumber + "\n" +
-                '}';
-    }
-
-    public int getLineNumber() {
-        return lineNumber;
-    }
-
-    public void setLineNumber(int lineNumber) {
-        this.lineNumber = lineNumber;
     }
 
     public String getNetcoolEvent() {
@@ -72,51 +44,69 @@ public class TdiTransaction {
         this.command = command;
     }
 
-    public String getNetcoolRequest() {
+    public TdiEvent getNetcoolRequest() {
         return netcoolRequest;
     }
 
-    public void setNetcoolRequest(String netcoolRequest) {
+    public void setNetcoolRequest(TdiEvent netcoolRequest) {
         this.netcoolRequest = netcoolRequest;
+        this.netcoolRequest.setTransaction(this);
     }
 
-    public String getSoapRequest() {
+    public TdiEvent getSoapRequest() {
         return soapRequest;
     }
 
-    public void setSoapRequest(String soapRequest) {
+    public void setSoapRequest(TdiEvent soapRequest) {
         this.soapRequest = soapRequest;
+        this.soapRequest.setTransaction(this);
     }
 
-    public String getSoapResponse() {
+    public TdiEvent getSoapResponse() {
         return soapResponse;
     }
 
-    public void setSoapResponse(String soapResponse) {
+    public void setSoapResponse(TdiEvent soapResponse) {
         this.soapResponse = soapResponse;
+        this.soapResponse.setTransaction(this);
     }
 
-    public String getNetcoolResponse() {
+    public TdiEvent getNetcoolResponse() {
         return netcoolResponse;
     }
 
-    public void setNetcoolResponse(String netcoolResponse) {
+    public void setNetcoolResponse(TdiEvent netcoolResponse) {
         this.netcoolResponse = netcoolResponse;
+        this.netcoolResponse.setTransaction(this);
     }
 
-    public String getGetKeysRequest() {
+    public TdiEvent getGetKeysRequest() {
         return getKeysRequest;
     }
 
-    public void setGetKeysRequest(String getKeysRequest) {
+    public void setGetKeysRequest(TdiEvent getKeysRequest) {
         this.getKeysRequest = getKeysRequest;
+        if(this.getKeysRequest != null) {
+            this.getKeysRequest.setTransaction(this);
+        }
     }
 
-    public String getGetKeysResponse() {
+    public TdiEvent getGetKeysResponse() {
         return getKeysResponse;
     }
 
-    public void setGetKeysResponse(String getKeysResponse) {
+    public void setGetKeysResponse(TdiEvent getKeysResponse) {
         this.getKeysResponse = getKeysResponse;
+        if(this.getKeysResponse != null) {
+            this.getKeysResponse.setTransaction(this);
+        }
+    }
+
+    public int getLineNumber() {
+        return lineNumber;
+    }
+
+    public void setLineNumber(int lineNumber) {
+        this.lineNumber = lineNumber;
     }
 }
