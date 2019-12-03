@@ -22,13 +22,12 @@ public class TdiEvent {
 
     @Override
     public String toString() {
-        return "TdiEvent{" +
-                "lineNumber=" + lineNumber +
-                ", dateTime=" + dateTime +
-                ", text='" + text + '\'' +
-                ", messagePayload='" + messagePayload + '\'' +
-                ", transaction=" + transaction +
-                '}';
+        return "\t{\n" +
+                "\t\tlineNumber=" + lineNumber + "\n" +
+                "\t\tdateTime=" + dateTime + "\n" +
+                "\t\ttext=" + text + "\n" +
+                "\t\tmessagePayload=" + messagePayload + "\n" +
+                "\t}";
     }
 
     private static LocalDateTime parseDateTime(String text){

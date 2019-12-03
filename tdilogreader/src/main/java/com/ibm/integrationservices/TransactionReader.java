@@ -20,6 +20,8 @@ public class TransactionReader {
         this.lines = lines;
     }
 
+    private String currentCommand;
+
     public List<TdiTransaction> readTransactions() throws IOException {
         List<TdiTransaction> transactions = new ArrayList<>();
         int linesTotal = this.lines.size();
@@ -28,6 +30,7 @@ public class TransactionReader {
             String line = this.lines.get(i);
             if (line.contains("XPath command:")) { //start of a new request
                 TdiTransaction transaction = new TdiTransaction(i, extractCommand(line));
+                currentCommand = transaction.getCommand();
                 String netcoolEventId = extractEventId(line, transaction.getCommand());
                 LocalDateTime dateTime = extractDateTime(line);
                 TdiEvent inputXml = extractMessage(
@@ -37,7 +40,7 @@ public class TransactionReader {
                         Arrays.asList("</command>"));
                 TdiEvent getKeysRequest = null;
                 TdiEvent getKeysResponse = null;
-                if (transaction.getCommand().equals("UPDATE_CALLBACK")) {
+                if (transaction.getCommand().equals("UPDATE_CALLBACK") || transaction.getCommand().equals("UPDATE_PROBLEM")) {
                     getKeysRequest = extractMessage(
                             lines,
                             i,
@@ -57,12 +60,12 @@ public class TransactionReader {
                 }
 
                 SearchCondition requestSearchCondition = new SearchCondition(
-                        netcoolEventId,
+                        null,
                         Arrays.asList("soap request:", "UpdateCallbackXML"),
                         Arrays.asList("TicketHandle"),
                         "not");
                 SearchCondition responseSearchCondition = new SearchCondition(
-                        netcoolEventId,
+                        null,
                         Arrays.asList("soap response:", "UpdateCallback Response:", "SOAP-ENV:Fault"),
                         Arrays.asList("TicketHandle"),
                         "not");

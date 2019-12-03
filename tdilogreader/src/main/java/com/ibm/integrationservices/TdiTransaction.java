@@ -1,5 +1,6 @@
 package com.ibm.integrationservices;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 public class TdiTransaction {
@@ -18,6 +19,36 @@ public class TdiTransaction {
     public TdiTransaction(int lineNumber, String command){
         this.lineNumber = lineNumber;
         this.command = command;
+    }
+
+    public Duration getSoapResponseTime(){
+        if(soapRequest == null || soapResponse == null) return null;
+        return Duration.between(soapRequest.getDateTime(), soapResponse.getDateTime());
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("TdiTransaction{\n");
+        sb.append("\tcommand=" + command + "\n");
+        sb.append("\tnetcoolEvent=" + netcoolEvent + "\n");
+        sb.append("\trequestTime=" + requestTime + "\n");
+        sb.append("\tnetcoolRequest=\n" + netcoolRequest + "\n");
+        if(getKeysRequest != null){
+            sb.append("\tgetKeysRequest=\n" + getKeysRequest + "\n");
+        }
+        if(getKeysResponse != null){
+            sb.append("\tgetKeysResponse=\n" + getKeysResponse + "\n");
+        }
+        sb.append("\tsoapRequest=\n" + soapRequest + "\n");
+        sb.append("\tsoapResponse=\n" + soapResponse + "\n");
+        sb.append("\tnetcoolResponse=\n" + netcoolResponse + "\n");
+        if(getSoapResponseTime()!=null){
+            sb.append("\tSOAP response time=" + getSoapResponseTime().toString() + "\n");
+        }
+        sb.append("\tlineNumber=" + lineNumber + "\n");
+        sb.append('}');
+        return sb.toString();
     }
 
     public String getNetcoolEvent() {

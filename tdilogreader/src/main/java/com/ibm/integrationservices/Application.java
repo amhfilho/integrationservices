@@ -24,22 +24,54 @@ public class Application {
             TransactionReader reader = new TransactionReader(lines);
             List<TdiTransaction> transactions = reader.readTransactions();
 
+            TransactionManager manager = new TransactionManager(transactions);
+            System.out.println(manager.statisticsReport());
+
             String command = "";
             while(!command.equalsIgnoreCase("exit")){
                 System.out.print("enter command>");
                 Scanner scanner = new Scanner(System.in);
-                command = scanner.nextLine().toLowerCase();
+                command = scanner.nextLine().trim().toLowerCase();
+                String[] token = command.split("\\s+");
 
-                switch(command){
+                switch(token[0]){
                     case "stats":
-                        System.out.println(new TransactionStatistics(transactions).statisticsReport());
+                        System.out.println(manager.statisticsReport());
                         break;
+                    case "callback":
+                        manager.findByCommand("CALLBACK").forEach(System.out::println);
+                        break;
+                    case "create":
+                        manager.findByCommand("CREATE_PROBLEM").forEach(System.out::println);
+                        break;
+                    case "update":
+                        manager.findByCommand("UPDATE_PROBLEM").forEach(System.out::println);
+                        break;
+                    case "ucallback":
+                        manager.findByCommand("UPDATE_CALLBACK").forEach(System.out::println);
+                        break;
+                    case "event":
+                        if(token.length < 2) {
+                            System.err.println("Invalid command. Usage: event <netcool event id>");
+                            break;
+                        }
+                        List<TdiTransaction> transactionList = manager.findByNetcoolEvent(token[1]);
+                        if(transactionList.size() == 0){
+                            System.out.println("Not found");
+                        }
+                        transactionList.forEach(System.out::println);
+                        break;
+                    case "help":
+                        help();
+                        break;
+                    case "exit":
+                        System.exit(0);
                     default:
-                        usage();
+                        System.out.println("Invalid command");
+                        help();
                         break;
                 }
             }
-
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -48,5 +80,16 @@ public class Application {
 
     private static void usage(){
         System.err.println("Usage: tdilogreader <file>");
+    }
+
+    private static void help() {
+        System.out.println("Help of available commands: \n" +
+                "\tstats                      Displays totals of transactions by type\n" +
+                "\tcallback                   List of all CALLBACK transactions\n" +
+                "\tcreate                     List of all CREATE transactions\n" +
+                "\tupdate                     List of all UPDATE_PROBLEM transactions\n" +
+                "\tucallback                  List of all UPDATE_CALLBACK transactions\n" +
+                "\tevent <netcool event id>   List of all transactions with given event id\n" +
+                "\texit                       Exits program");
     }
 }
