@@ -12,7 +12,7 @@ import static org.junit.Assert.fail;
 public class TransactionReaderTest {
     @Test
     public void shouldReturnUpdateCallbackResponse() throws IOException {
-        InputStream inputStream = getClass().getResourceAsStream("/acc.log");
+        InputStream inputStream = getClass().getResourceAsStream("/bbd.log");
         List<String> lines = new TdiFileReader().open(inputStream);
         assertTrue(lines.size() > 0);
 
@@ -23,6 +23,11 @@ public class TransactionReaderTest {
             String text = transaction.getSoapResponse().getText();
             if (text.toLowerCase().contains("callback query")) {
                 fail("contains callback query in text");
+            }
+            String netcoolResponseText = transaction.getNetcoolResponse().getText();
+            if(netcoolResponseText.toLowerCase().contains("<row>") ||
+            netcoolResponseText.toLowerCase().contains("id=\"callback\"")){
+                fail("contains <row> in text");
             }
         }
         assertTrue(true);

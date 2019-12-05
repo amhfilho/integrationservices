@@ -23,6 +23,7 @@ public class TdiTransaction {
 
     public Duration getSoapResponseTime(){
         if(soapRequest == null || soapResponse == null) return null;
+        if(soapRequest.getDateTime() == null || soapResponse.getDateTime() == null) return null;
         return Duration.between(soapRequest.getDateTime(), soapResponse.getDateTime());
     }
 

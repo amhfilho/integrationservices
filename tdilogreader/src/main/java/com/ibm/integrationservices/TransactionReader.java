@@ -20,7 +20,7 @@ public class TransactionReader {
         this.lines = lines;
     }
 
-    private String currentCommand;
+    private TdiTransaction currentTransaction;
 
     public List<TdiTransaction> readTransactions() throws IOException {
         List<TdiTransaction> transactions = new ArrayList<>();
@@ -30,62 +30,76 @@ public class TransactionReader {
             String line = this.lines.get(i);
             if (line.contains("XPath command:")) { //start of a new request
                 TdiTransaction transaction = new TdiTransaction(i, extractCommand(line));
-                currentCommand = transaction.getCommand();
+                currentTransaction = transaction;
                 String netcoolEventId = extractEventId(line, transaction.getCommand());
                 LocalDateTime dateTime = extractDateTime(line);
                 TdiEvent inputXml = extractMessage(
-                        lines,
                         i,
-                        new SearchCondition(Arrays.asList("Input XML")),
-                        Arrays.asList("</command>"));
+                        new SearchCondition(new SearchExpression("Input XML")),
+                        Arrays.asList("</command>"),
+                        "inputXml");
+
                 TdiEvent getKeysRequest = null;
                 TdiEvent getKeysResponse = null;
                 if (transaction.getCommand().equals("UPDATE_CALLBACK") || transaction.getCommand().equals("UPDATE_PROBLEM")) {
                     getKeysRequest = extractMessage(
-                            lines,
                             i,
                             new SearchCondition(
-                                    Arrays.asList("TicketHandle"),
-                                    Arrays.asList("soap request:"),
-                                    "and"),
-                            Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"));
+                                    new SearchExpression("TicketHandle"),
+                                    new SearchExpression("soap request")),
+                            Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"),
+                            "getKeysRequest");
                     getKeysResponse = extractMessage(
-                            lines,
                             i,
                             new SearchCondition(
-                                    Arrays.asList("TicketHandle"),
-                                    Arrays.asList("soap response:"),
-                                    "and"),
-                            Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"));
+                                    new SearchExpression("TicketHandle"),
+                                    new SearchExpression("soap response")),
+                            Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"),
+                            "getKeysResponse");
                 }
 
-                SearchCondition requestSearchCondition = new SearchCondition(
-                        null,
-                        Arrays.asList("soap request:", "UpdateCallbackXML"),
-                        Arrays.asList("TicketHandle"),
-                        "not");
-                SearchCondition responseSearchCondition = new SearchCondition(
-                        null,
-                        Arrays.asList("soap response:", "UpdateCallback Response:", "SOAP-ENV:Fault"),
-                        Arrays.asList("TicketHandle"),
-                        "not");
+                SearchCondition requestSearchCondition = null;
+                SearchCondition responseSearchCondition = null;
+                SearchCondition netcoolResponseSearchCondition = null;
+
+                if(!transaction.getCommand().equals("CALLBACK")) {
+                    requestSearchCondition = new SearchCondition(
+                            new SearchExpression("soap request:", "UpdateCallbackXML"),
+                            new SearchExpression("TicketHandle", "Callback Query").not());
+                    responseSearchCondition = new SearchCondition(
+                            new SearchExpression("soap response:", "UpdateCallback Response:","SOAP-ENV:Fault"),
+                            new SearchExpression("TicketHandle", "Callback Query").not());
+                    netcoolResponseSearchCondition = new SearchCondition(
+                            new SearchExpression("<result"),
+                            new SearchExpression("id=\"CALLBACK\"").not()
+                    );
+
+                } else {
+                    requestSearchCondition = new SearchCondition(
+                            new SearchExpression("soap request:", "UpdateCallbackXML"),
+                            new SearchExpression("TicketHandle").not());
+                    responseSearchCondition = new SearchCondition(
+                            new SearchExpression("soap response:","SOAP-ENV:Fault"),
+                            new SearchExpression("TicketHandle").not());
+                    netcoolResponseSearchCondition = new SearchCondition(
+                            new SearchExpression("<result"));
+                }
 
                 TdiEvent soapRequest = extractMessage(
-                        lines,
                         i,
                         requestSearchCondition,
-                        Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"));
+                        Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"),
+                        "soapRequest");
                 TdiEvent soapResponse = extractMessage(
-                        lines,
                         i,
                         responseSearchCondition,
-                        Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"));
+                        Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"),
+                        "soapResponse");
                 TdiEvent netcoolResponse = extractMessage(
-                        lines,
                         i,
-                        new SearchCondition(Arrays.asList("<result")),
-                        Arrays.asList("</result>"));
-
+                        netcoolResponseSearchCondition,
+                        Arrays.asList("</result>"),
+                        "netcoolResponse");
 
                 transaction.setRequestTime(dateTime);
                 transaction.setNetcoolEvent(netcoolEventId);
@@ -135,7 +149,7 @@ public class TransactionReader {
         return false;
     }
 
-    private TdiEvent extractMessage(List<String> lines, int cursor, SearchCondition startSearch, List<String> endKey) {
+    private TdiEvent extractMessage(int cursor, SearchCondition startSearch, List<String> endKey, String currentRequest) {
         boolean finishPart = false;
         String part = "";
         int aux = cursor + 1;
@@ -143,7 +157,7 @@ public class TransactionReader {
         int lineFound = 0;
         while (!finishPart && aux < lines.size()) {
             String actualLine = lines.get(aux);
-            if (startSearch.match(actualLine)) {
+            if (startSearch.isValid(actualLine)) {
                 partFound = true;
                 lineFound = aux;
                 part += actualLine;
