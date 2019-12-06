@@ -122,14 +122,16 @@ public class TransactionReader {
     }
 
     private LocalDateTime extractDateTime(String line) {
-        String strings[] = line.split(" ");
+        String strings[] = line.split("\\s+");
         return LocalDateTime.parse(strings[0] + " " + strings[1], DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS"));
     }
 
     private String extractEventId(String line, String command) {
         if (!command.equals("CALLBACK")) {
-            String[] strings = line.split(" ");
-            return strings[5].replaceAll("\'", "").replaceAll("::", "");
+            String[] strings = line.split("\\s+");
+            String tmp = strings[4].replaceAll("\'", "");
+            int index = tmp.indexOf("::") + 2;
+            return (index > -1 ? tmp.substring(index) : tmp);
         }
         return "";
     }
