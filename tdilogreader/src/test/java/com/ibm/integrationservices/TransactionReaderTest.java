@@ -36,10 +36,15 @@ public class TransactionReaderTest {
 
             String soapRequestText = transaction.getSoapRequest().getText();
             assertTrue(soapRequestText.contains("<soapenv:Envelope"));
+            assertTrue(soapRequestText.contains(transaction.getNetcoolEvent()));
 
 
             String soapResponseText = transaction.getSoapResponse().getText();
             assertFalse(soapResponseText.toLowerCase().contains("callback query"));
+            if(!soapResponseText.contains(transaction.getNetcoolEvent())){
+                System.out.println(soapResponseText);
+            }
+            assertTrue(soapResponseText.contains(transaction.getNetcoolEvent()));
 
             String netcoolResponseText = transaction.getNetcoolResponse().getText();
             assertFalse(netcoolResponseText.toLowerCase().contains("<row>") ||

@@ -27,6 +27,10 @@ public class TdiTransaction {
         return Duration.between(soapRequest.getDateTime(), soapResponse.getDateTime());
     }
 
+    public boolean isUpdateOperation(){
+        return command.equals("UPDATE_PROBLEM") || command.equals("UPDATE_CALLBACK");
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

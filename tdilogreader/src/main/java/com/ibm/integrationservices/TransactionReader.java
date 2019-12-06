@@ -19,8 +19,8 @@ public class TransactionReader {
     public TransactionReader(List<String> lines) {
         this.lines = lines;
     }
-
-    private TdiTransaction currentTransaction;
+    private SearchCondition soapEndSearchCondition =
+            new SearchCondition(new SearchExpression("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"));
 
     public List<TdiTransaction> readTransactions() throws IOException {
         List<TdiTransaction> transactions = new ArrayList<>();
@@ -30,33 +30,19 @@ public class TransactionReader {
             String line = this.lines.get(i);
             if (line.contains("XPath command:")) { //start of a new request
                 TdiTransaction transaction = new TdiTransaction(i, extractCommand(line));
-                currentTransaction = transaction;
                 String netcoolEventId = extractEventId(line, transaction.getCommand());
                 LocalDateTime dateTime = extractDateTime(line);
                 TdiEvent inputXml = extractMessage(
                         i,
                         new SearchCondition(new SearchExpression("Input XML")),
-                        Arrays.asList("</command>"),
-                        "inputXml");
+                        new SearchCondition(new SearchExpression("</command>")));
 
-                TdiEvent getKeysRequest = null;
-                TdiEvent getKeysResponse = null;
-                if (transaction.getCommand().equals("UPDATE_CALLBACK") || transaction.getCommand().equals("UPDATE_PROBLEM")) {
-                    getKeysRequest = extractMessage(
-                            i,
-                            new SearchCondition(
-                                    new SearchExpression("TicketHandle"),
-                                    new SearchExpression("soap request")),
-                            Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"),
-                            "getKeysRequest");
-                    getKeysResponse = extractMessage(
-                            i,
-                            new SearchCondition(
-                                    new SearchExpression("TicketHandle"),
-                                    new SearchExpression("soap response")),
-                            Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"),
-                            "getKeysResponse");
-                }
+
+                TdiEvent getKeysRequest = extractGetKeysRequestEvent(i, transaction);
+                TdiEvent getKeysResponse = extractGetKeysResponseEvent(i, transaction);
+                //TdiEvent soapRequest = extractSoapRequestEvent(i, transaction);
+                TdiEvent soapResponse = extractSoapResponseEvent(i, transaction);
+
 
                 SearchCondition requestSearchCondition = null;
                 SearchCondition responseSearchCondition = null;
@@ -85,26 +71,25 @@ public class TransactionReader {
                             new SearchExpression("<result"));
                 }
 
-                TdiEvent soapRequest = extractMessage(
-                        i,
-                        requestSearchCondition,
-                        Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"),
-                        "soapRequest");
-                TdiEvent soapResponse = extractMessage(
-                        i,
-                        responseSearchCondition,
-                        Arrays.asList("</SOAP-ENV:Envelope>", "</soapenv:Envelope>"),
-                        "soapResponse");
+
+
+//                TdiEvent soapRequest = extractMessage(
+//                        i,
+//                        requestSearchCondition,
+//                        soapEndSearchCondition);
+//                TdiEvent soapResponse = extractMessage(
+//                        i,
+//                        responseSearchCondition,
+//                        soapEndSearchCondition);
                 TdiEvent netcoolResponse = extractMessage(
                         i,
                         netcoolResponseSearchCondition,
-                        Arrays.asList("</result>"),
-                        "netcoolResponse");
+                        new SearchCondition(new SearchExpression("</result>")));
 
                 transaction.setRequestTime(dateTime);
                 transaction.setNetcoolEvent(netcoolEventId);
                 transaction.setNetcoolRequest(inputXml);
-                transaction.setSoapRequest(soapRequest);
+                //transaction.setSoapRequest(soapRequest);
                 transaction.setSoapResponse(soapResponse);
                 transaction.setNetcoolResponse(netcoolResponse);
                 transaction.setGetKeysRequest(getKeysRequest);
@@ -120,6 +105,19 @@ public class TransactionReader {
         System.out.println();
         return transactions;
     }
+
+    private TdiEvent extractSoapResponseEvent(int i, TdiTransaction transaction) {
+        SearchCondition start = null;
+        if(transaction.getCommand().equals("CREATE_PROBLEM")){
+            start = new SearchCondition(
+                    new SearchExpression("INFO"),
+                    new SearchExpression(transaction.getNetcoolEvent()),
+                    new SearchExpression("transformedCreateXML")
+            );
+        }
+        return extractMessage(i, start, soapEndSearchCondition);
+    }
+
 
     private LocalDateTime extractDateTime(String line) {
         String strings[] = line.split("\\s+");
@@ -142,16 +140,31 @@ public class TransactionReader {
         return input.substring(commandIndex).trim();
     }
 
-    private boolean containsAnyKey(String line, List<String> startKey) {
-        for (String key : startKey) {
-            if (line.toLowerCase().contains(key.toLowerCase())) {
-                return true;
-            }
+    private TdiEvent extractGetKeysRequestEvent(int cursor, TdiTransaction transaction){
+        if(transaction.isUpdateOperation()){
+            return extractGetKeysEvent(cursor, "request");
         }
-        return false;
+        return null;
     }
 
-    private TdiEvent extractMessage(int cursor, SearchCondition startSearch, List<String> endKey, String currentRequest) {
+    private TdiEvent extractGetKeysResponseEvent(int cursor, TdiTransaction transaction){
+        if(transaction.isUpdateOperation()){
+            return extractGetKeysEvent(cursor, "response");
+        }
+        return null;
+    }
+
+    private TdiEvent extractGetKeysEvent(int cursor, String requestOrResponse){
+            return extractMessage(
+                    cursor,
+                    new SearchCondition(
+                            new SearchExpression("TicketHandle"),
+                            new SearchExpression("soap "+ requestOrResponse)),
+                    soapEndSearchCondition
+            );
+    }
+
+    private TdiEvent extractMessage(int cursor, SearchCondition start, SearchCondition end) {
         boolean finishPart = false;
         String part = "";
         int aux = cursor + 1;
@@ -159,16 +172,16 @@ public class TransactionReader {
         int lineFound = 0;
         while (!finishPart && aux < lines.size()) {
             String actualLine = lines.get(aux);
-            if (startSearch.isValid(actualLine)) {
+            if (start.isValid(actualLine)) {
                 partFound = true;
                 lineFound = aux;
                 part += actualLine;
-                if (containsAnyKey(part, endKey)) {
+                if (end.isValid(part)) {
                     break;
                 }
             } else if (partFound) {
                 part += lines.get(aux);
-                if (containsAnyKey(lines.get(aux), endKey)) {
+                if (end.isValid(lines.get(aux))) {
                     finishPart = true;
                     partFound = false;
                 }
