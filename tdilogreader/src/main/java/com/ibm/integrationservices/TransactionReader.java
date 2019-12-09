@@ -1,14 +1,10 @@
 package com.ibm.integrationservices;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Reads all transactions from logfile
@@ -31,6 +27,7 @@ public class TransactionReader {
             if (line.contains("XPath command:")) { //start of a new request
                 TdiTransaction transaction = new TdiTransaction(i, extractCommand(line));
                 String netcoolEventId = extractEventId(line, transaction.getCommand());
+                transaction.setNetcoolEvent(netcoolEventId);
                 LocalDateTime dateTime = extractDateTime(line);
                 TdiEvent inputXml = extractMessage(
                         i,
@@ -40,56 +37,15 @@ public class TransactionReader {
 
                 TdiEvent getKeysRequest = extractGetKeysRequestEvent(i, transaction);
                 TdiEvent getKeysResponse = extractGetKeysResponseEvent(i, transaction);
-                //TdiEvent soapRequest = extractSoapRequestEvent(i, transaction);
+                TdiEvent soapRequest = extractSoapRequestEvent(i, transaction);
                 TdiEvent soapResponse = extractSoapResponseEvent(i, transaction);
+                TdiEvent netcoolResponse = extractNetcoolResponseEvent(i, transaction);
 
-
-                SearchCondition requestSearchCondition = null;
-                SearchCondition responseSearchCondition = null;
-                SearchCondition netcoolResponseSearchCondition = null;
-
-                if(!transaction.getCommand().equals("CALLBACK")) {
-                    requestSearchCondition = new SearchCondition(
-                            new SearchExpression("soap request:", "UpdateCallbackXML"),
-                            new SearchExpression("TicketHandle", "Callback Query").not());
-                    responseSearchCondition = new SearchCondition(
-                            new SearchExpression("soap response:", "UpdateCallback Response:","SOAP-ENV:Fault"),
-                            new SearchExpression("TicketHandle", "Callback Query").not());
-                    netcoolResponseSearchCondition = new SearchCondition(
-                            new SearchExpression("<result"),
-                            new SearchExpression("id=\"CALLBACK\"").not()
-                    );
-
-                } else {
-                    requestSearchCondition = new SearchCondition(
-                            new SearchExpression("soap request:", "UpdateCallbackXML"),
-                            new SearchExpression("TicketHandle").not());
-                    responseSearchCondition = new SearchCondition(
-                            new SearchExpression("soap response:","SOAP-ENV:Fault"),
-                            new SearchExpression("TicketHandle").not());
-                    netcoolResponseSearchCondition = new SearchCondition(
-                            new SearchExpression("<result"));
-                }
-
-
-
-//                TdiEvent soapRequest = extractMessage(
-//                        i,
-//                        requestSearchCondition,
-//                        soapEndSearchCondition);
-//                TdiEvent soapResponse = extractMessage(
-//                        i,
-//                        responseSearchCondition,
-//                        soapEndSearchCondition);
-                TdiEvent netcoolResponse = extractMessage(
-                        i,
-                        netcoolResponseSearchCondition,
-                        new SearchCondition(new SearchExpression("</result>")));
 
                 transaction.setRequestTime(dateTime);
                 transaction.setNetcoolEvent(netcoolEventId);
                 transaction.setNetcoolRequest(inputXml);
-                //transaction.setSoapRequest(soapRequest);
+                transaction.setSoapRequest(soapRequest);
                 transaction.setSoapResponse(soapResponse);
                 transaction.setNetcoolResponse(netcoolResponse);
                 transaction.setGetKeysRequest(getKeysRequest);
@@ -106,13 +62,77 @@ public class TransactionReader {
         return transactions;
     }
 
-    private TdiEvent extractSoapResponseEvent(int i, TdiTransaction transaction) {
+    private TdiEvent extractNetcoolResponseEvent(int i, TdiTransaction transaction) {
+        SearchCondition start = new SearchCondition(
+                new SearchExpression("<result"),
+                new SearchExpression(transaction.getNetcoolEvent()),
+                new SearchExpression("id=\"CALLBACK\"").not()
+        );
+        if(transaction.isCallback()){
+            start = new SearchCondition(new SearchExpression("<result"),
+                    new SearchExpression("id=\"CALLBACK\""));
+        }
+        return extractMessage(i,start, new SearchCondition(new SearchExpression("</result>")));
+    }
+
+    private TdiEvent extractSoapRequestEvent(int i, TdiTransaction transaction) {
         SearchCondition start = null;
-        if(transaction.getCommand().equals("CREATE_PROBLEM")){
+        if(transaction.isCreateProblem()){
             start = new SearchCondition(
                     new SearchExpression("INFO"),
                     new SearchExpression(transaction.getNetcoolEvent()),
-                    new SearchExpression("transformedCreateXML")
+                    new SearchExpression("transformedCreateXML","SOAP-ENV:Fault")
+            );
+        }
+        if(transaction.isUpdateProblem()){
+            start = new SearchCondition(
+                    new SearchExpression("INFO"),
+                    new SearchExpression(transaction.getNetcoolEvent()),
+                    new SearchExpression("Transform UpdateXML"),
+                    new SearchExpression("TicketHandle", "Callback Query").not()
+            );
+        }
+        if(transaction.isUpdateCallback()) {
+            start = new SearchCondition(
+                    new SearchExpression("INFO"),
+                    new SearchExpression(transaction.getNetcoolEvent()),
+                    new SearchExpression("transformedUpdateCallbackXML", "UpdateCallbackXML"),
+                    new SearchExpression("TicketHandle", "Callback Query").not()
+            );
+        }
+        if(transaction.isCallback()){
+            start = new SearchCondition(
+                    new SearchExpression("INFO"),
+                    new SearchExpression("updatedCallbackXML")
+            );
+        }
+        return extractMessage(i, start, soapEndSearchCondition);
+    }
+
+    private TdiEvent extractSoapResponseEvent(int i, TdiTransaction transaction) {
+        SearchCondition start = null;
+        if(transaction.isCreateProblem()){
+            start = new SearchCondition(
+                    new SearchExpression("CreateResponseXSL: Initial Create Response:"),
+                    new SearchExpression(transaction.getNetcoolEvent(),"SOAP-ENV:Fault")
+            );
+        }
+        if(transaction.isUpdateProblem()) {
+            start = new SearchCondition(
+                    new SearchExpression("UpdateResponseXSL"),
+                    new SearchExpression(transaction.getNetcoolEvent(),"SOAP-ENV:Fault")
+            );
+        }
+        if(transaction.isUpdateCallback()){
+            start = new SearchCondition(
+                    new SearchExpression("UpdateCallbackResponseXSL"),
+                    new SearchExpression(transaction.getNetcoolEvent(),"SOAP-ENV:Fault")
+            );
+        }
+        if(transaction.isCallback()) {
+            start = new SearchCondition(
+                    new SearchExpression("[Callback Query]"),
+                    new SearchExpression("SOAP response:")
             );
         }
         return extractMessage(i, start, soapEndSearchCondition);

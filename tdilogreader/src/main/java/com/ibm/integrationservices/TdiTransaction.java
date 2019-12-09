@@ -27,6 +27,22 @@ public class TdiTransaction {
         return Duration.between(soapRequest.getDateTime(), soapResponse.getDateTime());
     }
 
+    public boolean isCreateProblem() {
+        return "CREATE_PROBLEM".equals(command);
+    }
+
+    public boolean isUpdateProblem() {
+        return "UPDATE_PROBLEM".equals(command);
+    }
+
+    public boolean isCallback() {
+        return "CALLBACK".equals(command);
+    }
+
+    public boolean isUpdateCallback(){
+        return "UPDATE_CALLBACK".equals(command);
+    }
+
     public boolean isUpdateOperation(){
         return command.equals("UPDATE_PROBLEM") || command.equals("UPDATE_CALLBACK");
     }

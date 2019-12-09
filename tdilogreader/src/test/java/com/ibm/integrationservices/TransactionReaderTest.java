@@ -49,6 +49,7 @@ public class TransactionReaderTest {
             String netcoolResponseText = transaction.getNetcoolResponse().getText();
             assertFalse(netcoolResponseText.toLowerCase().contains("<row>") ||
                     netcoolResponseText.toLowerCase().contains("id=\"callback\""));
+            assertTrue(netcoolResponseText.contains(transaction.getNetcoolEvent()));
         }
     }
 }

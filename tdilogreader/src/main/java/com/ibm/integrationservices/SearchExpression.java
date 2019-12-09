@@ -16,14 +16,16 @@ public class SearchExpression {
 
     public boolean match(String source){
         boolean match = false;
-        for(String entry:query){
-            if(source.toLowerCase().contains(entry.toLowerCase())){
-                match = true;
-                break;
+        if(source != null) {
+            for (String entry : query) {
+                if (source.toLowerCase().contains(entry.toLowerCase())) {
+                    match = true;
+                    break;
+                }
             }
-        }
-        if(condition.equals("NOT_CONTAINS")){
-            return !match;
+            if (condition.equals("NOT_CONTAINS")) {
+                return !match;
+            }
         }
         return match;
     }

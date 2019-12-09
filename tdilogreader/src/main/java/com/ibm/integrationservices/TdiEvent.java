@@ -25,7 +25,7 @@ public class TdiEvent {
         return "\t{\n" +
                 "\t\tlineNumber=" + lineNumber + "\n" +
                 "\t\tdateTime=" + dateTime + "\n" +
-                "\t\ttext=" + text + "\n" +
+                //"\t\ttext=" + text + "\n" +
                 "\t\tmessagePayload=" + messagePayload + "\n" +
                 "\t}";
     }
