@@ -58,8 +58,14 @@ public class Application {
                         List<TdiTransaction> transactionList = manager.findByNetcoolEvent(token[1]);
                         if(transactionList.size() == 0){
                             System.out.println("Not found");
+                            break;
                         }
-                        transactionList.forEach(System.out::println);
+                        if(token.length > 2){
+                            String fileName = token[2];
+                            writeFile(transactionList, fileName);
+                        } else {
+                            transactionList.forEach(System.out::println);
+                        }
                         break;
                     case "help":
                         help();
@@ -109,12 +115,12 @@ public class Application {
 
     private static void help() {
         System.out.println("Help of available commands: \n" +
-                "\tstats                      Displays totals of transactions by type\n" +
-                "\tcallback  [<file>]         List of all CALLBACK transactions. Saves content to a file if required \n" +
-                "\tcreate    [<file>]         List of all CREATE transactions. Saves content to a file if required\n" +
-                "\tupdate    [<file>]         List of all UPDATE_PROBLEM transactions. Saves content to a file if required\n" +
-                "\tucallback [<file>]         List of all UPDATE_CALLBACK transactions. Saves content to a file if required\n" +
-                "\tevent <netcool event id>   List of all transactions with given event id\n" +
-                "\texit                       Exit app");
+                "\tstats                              Displays totals of transactions by type\n" +
+                "\tcallback  [<file>]                 List of all CALLBACK transactions. Saves content to a file if required \n" +
+                "\tcreate    [<file>]                 List of all CREATE transactions. Saves content to a file if required\n" +
+                "\tupdate    [<file>]                 List of all UPDATE_PROBLEM transactions. Saves content to a file if required\n" +
+                "\tucallback [<file>]                 List of all UPDATE_CALLBACK transactions. Saves content to a file if required\n" +
+                "\tevent <netcool event id> [<file>]  List of all transactions with given event id. Saves content to a file if required\n" +
+                "\texit                               Exit app");
     }
 }

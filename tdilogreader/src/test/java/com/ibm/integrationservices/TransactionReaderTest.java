@@ -1,38 +1,76 @@
 package com.ibm.integrationservices;
 
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.IOError;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class TransactionReaderTest {
-    private List<TdiTransaction> transactions;
-    private TransactionManager manager;
+    private static TransactionManager manager;
 
-    @Before
-    public void loadTransactions() throws IOException {
+    @BeforeClass
+    public static void loadTransactions() throws IOException {
         if (manager == null) {
+            System.out.println("Loading transactions...");
             manager = new TransactionManager(
                         new TransactionReader(
                             new TdiFileReader()
-                                    .open(getClass().getResourceAsStream("/bbd.log")))
+                                    .open(TransactionReaderTest.class.getResourceAsStream("/bbd.log")))
                                     .readTransactions());
+            System.out.println("Done");
         }
     }
 
     @Test
+    public void testEventId() {
+        String eventId = "USDL0P0BBDP:3335781:BOD";
+        List<TdiTransaction> transactions = manager.findByNetcoolEvent(eventId);
+        assertTrue(transactions.size() > 0);
+    }
+
+    @Test
+    public void createProblemTest(){
+        eventsTest("CREATE_PROBLEM");
+    }
+
+    @Test
     public void updateCallbackTest() {
-        List<TdiTransaction> uCallbackList = manager.findByCommand("UPDATE_CALLBACK");
+        eventsTest("UPDATE_CALLBACK");
+    }
+
+    @Test
+    public void updateProblemTest() {
+        eventsTest("UPDATE_PROBLEM");
+    }
+
+    @Test
+    public void callbackTest() {
+        List<TdiTransaction> callbackList = manager.findByCommand("CALLBACK");
+
+        for(TdiTransaction transaction : callbackList) {
+            String inputXmlText = transaction.getNetcoolRequest().getText();
+            assertTrue(inputXmlText.contains(String.format("<exec name=\"%s\">","CALLBACK")));
+
+            String soapRequestText = transaction.getSoapRequest().getText();
+            assertTrue(soapRequestText.contains("<soapenv:Envelope"));
+
+            String netcoolResponseText = transaction.getNetcoolResponse().getText();
+            assertTrue(netcoolResponseText.toLowerCase().contains("id=\"callback\""));
+
+        }
+    }
+
+    public void eventsTest(String command){
+        List<TdiTransaction> uCallbackList = manager.findByCommand(command);
 
         for (TdiTransaction transaction : uCallbackList) {
             //Testing inputXMl
             String inputXmlText = transaction.getNetcoolRequest().getText();
-            assertTrue(inputXmlText.contains("<exec name=\"UPDATE_CALLBACK\">"));
+            assertTrue(inputXmlText.contains(String.format("<exec name=\"%s\">",command)));
 
             String soapRequestText = transaction.getSoapRequest().getText();
             assertTrue(soapRequestText.contains("<soapenv:Envelope"));
@@ -41,10 +79,8 @@ public class TransactionReaderTest {
 
             String soapResponseText = transaction.getSoapResponse().getText();
             assertFalse(soapResponseText.toLowerCase().contains("callback query"));
-            if(!soapResponseText.contains(transaction.getNetcoolEvent())){
-                System.out.println(soapResponseText);
-            }
-            assertTrue(soapResponseText.contains(transaction.getNetcoolEvent()));
+            assertTrue(soapResponseText.contains(transaction.getNetcoolEvent()) ||
+                              soapResponseText.toLowerCase().contains("SOAP-ENV:Fault"));
 
             String netcoolResponseText = transaction.getNetcoolResponse().getText();
             assertFalse(netcoolResponseText.toLowerCase().contains("<row>") ||

@@ -39,7 +39,7 @@ public class TransactionManager {
         List<TdiTransaction> result = new ArrayList<>();
         for(TdiTransaction transaction: transactions){
             if(!transaction.getCommand().equals("CALLBACK")){
-                if(transaction.getNetcoolEvent().contains(netcoolEvent)){
+                if(transaction.getNetcoolEvent().toLowerCase().contains(netcoolEvent.toLowerCase())){
                     result.add(transaction);
                 }
             }
